@@ -1,0 +1,9 @@
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f0f3f6;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td, 
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+    border: none !important;
+}

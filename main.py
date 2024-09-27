@@ -1,133 +1,321 @@
-import streamlit as st
-import numpy as np
+
+import dash
+from dash import dcc, html, Input, Output
+import dash_table
 import pandas as pd
-import plotly.graph_objects as go
 
-# Set page config for a wide layout and custom theme
-st.set_page_config(layout="wide", page_title="NumPyro Model Dashboard", page_icon="📊")
+from utils.mcmc_runner import run_mcmc
+from utils.plots import create_dummy_plot, create_posterior_plot
+from models.mmm_model import mmm_model
+from models.healthcare_model import healthcare_model
+from models.finance_model import finance_model
 
-# Custom CSS to enhance the layout and make it look slick and glossy
-st.markdown("""
-    <style>
-    .stApp {
-        background-color: #f0f2f6;
-        font-family: 'Arial', sans-serif;
-    }
-    .stTabs {
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .stTab {
-        background-color: #f8f9fa;
-        color: #495057;
-        border-radius: 5px;
-        padding: 10px 20px;
-        font-weight: 600;
-    }
-    .stTab[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #007bff;
-        color: white;
-    }
-    .stButton>button {
-        background-color: #007bff;
-        color: white;
-        border-radius: 5px;
-        border: none;
-        padding: 10px 24px;
-        font-weight: 600;
-    }
-    .stButton>button:hover {
-        background-color: #0056b3;
-    }
-    .css-1aumxhk {
-        font-weight: 700;
-        font-size: 1.5rem;
-        color: #333333;
-        padding-top: 1rem;
-        padding-bottom: 0.5rem;
-    }
-    .css-1n76uvr {
-        padding: 0.75rem;
-        border-radius: 10px;
-        background-color: #007bff;
-        color: white;
-        box-shadow: 0px 5px 15px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-    }
-    .stDataFrame {
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        overflow: hidden;
-    }
-    .stDataFrame>div {
-        border-radius: 5px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# Initialize Dash app
+app = dash.Dash(__name__)
 
-# Main app title
-st.title("NumPyro Model Dashboard")
+# Load sample data
+df = pd.DataFrame({
+    f"Metric {i+1}": pd.Series(range(10)) for i in range(5)
+})
 
-# Sidebar with improved style
-st.sidebar.title("Model Controls")
-model_type = st.sidebar.selectbox("Select Model", ["MMM", "Healthcare", "Finance"])
-analysis_type = st.sidebar.selectbox("Select Analysis", [
-    "Model", "Learning", "Relationships", 
-    "Conditioning/Whatif", "Scoring", 
-    "Prediction/Forecasting", "Optimization"
+# Custom CSS
+app.index_string = open('assets/custom.css').read()
+
+# App layout
+app.layout = html.Div([
+    html.H1("📊 Model Dashboard", style={'textAlign': 'center'}),
+    dcc.Dropdown(id="model-dropdown", ...),
+    dcc.Tabs(id="tabs-analysis", ...),
+    html.Div([
+        dcc.Graph(id='main-graph', figure=create_dummy_plot()),
+        dash_table.DataTable(id='datatable', ...)
+    ]),
+    html.Footer("© 2024 Your Company Name")
 ])
 
-# Function to create sidebar controls based on selected analysis
-def create_sidebar_controls(analysis_type):
-    if analysis_type == "Model":
-        st.sidebar.slider("Number of parameters", 1, 10, 5)
-        st.sidebar.selectbox("Distribution type", ["Normal", "Poisson", "Gamma"])
-    elif analysis_type == "Learning":
-        st.sidebar.slider("Number of iterations", 1000, 10000, 5000)
-        st.sidebar.slider("Warmup steps", 100, 1000, 500)
-    # Add more controls for other analysis types as needed
+# Callback to update graph
+@app.callback(
+    Output('main-graph', 'figure'),
+    [Input('tabs-analysis', 'value'), Input('model-dropdown', 'value')]
+)
+def update_graph(selected_tab, selected_model):
+    if selected_tab == 'Learning':
+        X, y = ...  # Import from dummy_data.py
+        model = {'MMM': mmm_model, 'Healthcare': healthcare_model, 'Finance': finance_model}[selected_model]
+        samples = run_mcmc(model, X, y)
+        return create_posterior_plot(samples)
+    else:
+        return create_dummy_plot()
 
-# Call the function to create sidebar controls
-create_sidebar_controls(analysis_type)
+if __name__ == '__main__':
+    app.run_server(debug=True)
 
-# Function to create dummy plots (replace with actual model results later)
-def create_dummy_plot():
-    fig = go.Figure()
-    x = np.linspace(0, 10, 100)
-    y = np.sin(x)
-    fig.add_trace(go.Scatter(x=x, y=y, mode='lines', line=dict(color='blue', width=3)))
-    fig.update_layout(
-        title="Sample Plot",
-        xaxis_title="X Axis",
-        yaxis_title="Y Axis",
-        template="plotly_white",
-        title_font=dict(size=20, color='black'),
-        xaxis=dict(showline=True, showgrid=False),
-        yaxis=dict(showline=True, showgrid=False),
-    )
-    return fig
 
-# Main content with improved layout and design
-st.header(f"{model_type} Model - {analysis_type} Analysis")
 
-col1, col2 = st.columns(2)
+# import dash
+# from dash import dcc, html, Input, Output, State
+# import dash_table
+# import plotly.graph_objs as go
+# import numpy as np
+# import pandas as pd
+# import numpyro
+# import numpyro.distributions as dist
+# from numpyro.infer import MCMC, NUTS
+# import jax.random as random
+# import jax.numpy as jnp
 
-with col1:
-    st.plotly_chart(create_dummy_plot(), use_container_width=True)
+# # Create Dash app
+# app = dash.Dash(__name__)
 
-with col2:
-    st.write(f"This is where the {analysis_type} analysis for the {model_type} model will be displayed.")
-    st.write("Key metrics and insights will be shown here.")
-    
-    # Add a sample data table with enhanced styling
-    df = pd.DataFrame(
-        np.random.randn(10, 5),
-        columns=('col %d' % i for i in range(5))
-    )
-    st.dataframe(df.style.highlight_max(axis=0, color="yellow").highlight_min(axis=0, color="lightblue"))
+# # Sample data
+# df = pd.DataFrame(np.random.randn(10, 5), columns=[f"Metric {i+1}" for i in range(5)])
 
-# Footer with improved styling
-st.markdown("---")
-st.markdown("<div style='text-align: center; font-size: 0.8rem;'>© 2024 Your Company Name. All rights reserved.</div>", unsafe_allow_html=True)
+# # Numpyro models
+# def mmm_model(X, y):
+#     b0 = numpyro.sample("intercept", dist.Normal(0, 10))
+#     b1 = numpyro.sample("tv", dist.Normal(0, 5))
+#     b2 = numpyro.sample("radio", dist.Normal(0, 5))
+#     b3 = numpyro.sample("newspaper", dist.Normal(0, 5))
+#     sigma = numpyro.sample("sigma", dist.HalfNormal(5))
+#     mu = b0 + b1 * X[:, 0] + b2 * X[:, 1] + b3 * X[:, 2]
+#     numpyro.sample("y", dist.Normal(mu, sigma), obs=y)
+
+# def healthcare_model(X, y):
+#     b0 = numpyro.sample("intercept", dist.Normal(0, 10))
+#     b1 = numpyro.sample("age", dist.Normal(0, 5))
+#     b2 = numpyro.sample("bmi", dist.Normal(0, 5))
+#     sigma = numpyro.sample("sigma", dist.HalfNormal(5))
+#     mu = b0 + b1 * X[:, 0] + b2 * X[:, 1]
+#     numpyro.sample("y", dist.Normal(mu, sigma), obs=y)
+
+# def finance_model(X, y):
+#     b0 = numpyro.sample("intercept", dist.Normal(0, 10))
+#     b1 = numpyro.sample("income", dist.Normal(0, 5))
+#     b2 = numpyro.sample("credit_score", dist.Normal(0, 5))
+#     sigma = numpyro.sample("sigma", dist.HalfNormal(5))
+#     mu = b0 + b1 * X[:, 0] + b2 * X[:, 1]
+#     numpyro.sample("y", dist.Normal(mu, sigma), obs=y)
+
+# # Function to run MCMC
+# def run_mcmc(model, X, y, num_samples=1000):
+#     kernel = NUTS(model)
+#     mcmc = MCMC(kernel, num_samples=num_samples, num_warmup=500)
+#     mcmc.run(random.PRNGKey(0), X, y)
+#     return mcmc.get_samples()
+
+# # Create dummy plot
+# def create_dummy_plot():
+#     x = np.linspace(0, 10, 100)
+#     y = np.sin(x)
+#     fig = go.Figure(data=go.Scatter(x=x, y=y, mode='lines', line=dict(color='#9b59b6', width=3)))
+
+#     fig.update_layout(
+#         title=None,
+#         xaxis=dict(title=None, showgrid=False, zeroline=False),
+#         yaxis=dict(title=None, showgrid=False, zeroline=False),
+#         template="simple_white",
+#         margin=dict(l=40, r=40, t=20, b=20),
+#         font=dict(family="Poppins, sans-serif", size=12),
+#         plot_bgcolor='rgba(0,0,0,0)',
+#         paper_bgcolor='rgba(0,0,0,0)'
+#     )
+#     return fig
+
+# # Create posterior plot
+# def create_posterior_plot(samples):
+#     fig = go.Figure()
+#     for param, values in samples.items():
+#         fig.add_trace(go.Histogram(x=values, name=param, opacity=0.7))
+
+#     fig.update_layout(
+#         title="Posterior Distributions",
+#         xaxis_title="Parameter Value",
+#         yaxis_title="Frequency",
+#         barmode='overlay',
+#         template="simple_white",
+#         font=dict(family="Poppins, sans-serif", size=12),
+#         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+#     )
+#     return fig
+
+# # Custom CSS for better styling
+# custom_css = '''
+#     body {
+#         font-family: 'Poppins', sans-serif;
+#         background-color: #f0f3f6;
+#     }
+#     .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td, 
+#     .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+#         border: none !important;
+#     }
+# '''
+
+# app.index_string = f'''
+# <!DOCTYPE html>
+# <html>
+#     <head>
+#         {{%metas%}}
+#         <title>{{%title%}}</title>
+#         {{%favicon%}}
+#         {{%css%}}
+#         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+#         <style>
+#             {custom_css}
+#         </style>
+#     </head>
+#     <body>
+#         {{%app_entry%}}
+#         <footer>
+#             {{%config%}}
+#             {{%scripts%}}
+#             {{%renderer%}}
+#         </footer>
+#     </body>
+# </html>
+# '''
+
+# # App layout with pastel colors and improved styling
+# app.layout = html.Div(
+#     style={'backgroundColor': '#f0f3f6', 'padding': '30px', 'minHeight': '100vh'},
+#     children=[
+#         # Title
+#         html.H1("📊 Model Dashboard", 
+#                 style={'textAlign': 'center', 'fontWeight': '600', 'fontSize': '28px', 'color': '#34495e', 'marginBottom': '30px'}),
+
+#         # Model controls section
+#         html.Div(
+#             style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'marginBottom': '30px'},
+#             children=[
+#                 html.Label("Select Model", style={'fontWeight': '500', 'marginRight': '15px', 'color': '#34495e'}),
+#                 dcc.Dropdown(
+#                     id="model-dropdown",
+#                     options=[
+#                         {'label': 'MMM', 'value': 'MMM'},
+#                         {'label': 'Healthcare', 'value': 'Healthcare'},
+#                         {'label': 'Finance', 'value': 'Finance'}
+#                     ],
+#                     value='Healthcare',
+#                     clearable=False,
+#                     style={'width': '220px', 'borderRadius': '8px', 'boxShadow': '0 2px 4px rgba(0, 0, 0, 0.1)'}
+#                 ),
+#             ]
+#         ),
+
+#         # Tabs for analysis types
+#         html.Div(
+#             style={'backgroundColor': '#ffffff', 'borderRadius': '12px', 'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)', 'marginBottom': '30px'},
+#             children=[
+#                 dcc.Tabs(id="tabs-analysis", value='Scoring', children=[
+#                     dcc.Tab(label='Model', value='Model'),
+#                     dcc.Tab(label='Learning', value='Learning'),
+#                     dcc.Tab(label='Relationship', value='Relationships'),
+#                     dcc.Tab(label='Conditioning', value='Conditioning'),
+#                     dcc.Tab(label='Scoring', value='Scoring'),
+#                     dcc.Tab(label='Prediction', value='Prediction'),
+#                     dcc.Tab(label='Optimization', value='Optimization'),
+#                 ], style={'fontFamily': 'Poppins', 'fontWeight': '400', 'fontSize': '14px'},
+#                 colors={
+#                     "border": "#e0e0e0",
+#                     "primary": "#3498db",
+#                     "background": "#ffffff"
+#                 })
+#             ]
+#         ),
+
+#         # Main content (two columns: plot and key metrics)
+#         html.Div(
+#             style={'display': 'flex', 'justifyContent': 'space-between', 'flexWrap': 'wrap'},
+#             children=[
+#                 # Plot column
+#                 html.Div(
+#                     style={'width': '48%', 'minWidth': '300px', 'padding': '20px', 'backgroundColor': '#ffffff', 'borderRadius': '12px', 'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)', 'marginBottom': '20px'},
+#                     children=[
+#                         html.H3("Performance Over Time", style={'fontFamily': 'Poppins', 'fontSize': '18px', 'fontWeight': '500', 'color': '#34495e', 'marginBottom': '15px'}),
+#                         dcc.Graph(id='main-graph', figure=create_dummy_plot(), config={'displayModeBar': False}),
+#                     ]
+#                 ),
+
+#                 # Data table and metrics column
+#                 html.Div(
+#                     style={'width': '48%', 'minWidth': '300px', 'padding': '20px', 'backgroundColor': '#ffffff', 'borderRadius': '12px', 'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)', 'marginBottom': '20px'},
+#                     children=[
+#                         html.H3("Key Metrics", 
+#                                 style={'fontFamily': 'Poppins', 'fontSize': '18px', 'fontWeight': '500', 'color': '#34495e', 'marginBottom': '15px'}),
+#                         dash_table.DataTable(
+#                             id='datatable',
+#                             columns=[{'name': col, 'id': col} for col in df.columns],
+#                             data=df.to_dict('records'),
+#                             style_table={'overflowX': 'auto'},
+#                             style_header={
+#                                 'backgroundColor': '#f0f3f6',
+#                                 'fontWeight': '500',
+#                                 'color': '#34495e',
+#                                 'borderBottom': '1px solid #e0e0e0',
+#                                 'textAlign': 'left',
+#                                 'padding': '12px'
+#                             },
+#                             style_cell={
+#                                 'backgroundColor': '#ffffff',
+#                                 'color': '#34495e',
+#                                 'borderBottom': '1px solid #f0f3f6',
+#                                 'textAlign': 'left',
+#                                 'padding': '12px'
+#                             },
+#                             style_data_conditional=[
+#                                 {
+#                                     'if': {'row_index': 'odd'},
+#                                     'backgroundColor': '#f8fafc',
+#                                 },
+#                                 {
+#                                     'if': {
+#                                         'filter_query': '{{Metric 1}} = {}'.format(df['Metric 1'].max()),
+#                                         'column_id': 'Metric 1'
+#                                     },
+#                                     'backgroundColor': '#d5f5e3',
+#                                     'color': '#27ae60'
+#                                 }
+#                             ]
+#                         )
+#                     ]
+#                 )
+#             ]
+#         ),
+
+#         # Footer
+#         html.Footer("© 2024 Your Company Name", 
+#                     style={'textAlign': 'center', 'padding': '20px', 'fontFamily': 'Poppins', 'fontSize': '14px', 'color': '#7f8c8d', 'marginTop': '30px'})
+#     ]
+# )
+
+# # Callback to update the graph based on selected tab and model
+# @app.callback(
+#     Output('main-graph', 'figure'),
+#     [Input('tabs-analysis', 'value'),
+#      Input('model-dropdown', 'value')]
+# )
+# def update_graph(selected_tab, selected_model):
+#     if selected_tab == 'Learning':
+#         # Generate dummy data for MCMC
+#         X = np.random.randn(100, 3)
+#         y = 2 + 0.5 * X[:, 0] + 0.3 * X[:, 1] + 0.1 * X[:, 2] + np.random.randn(100) * 0.1
+
+#         # Select the appropriate model based on the dropdown
+#         if selected_model == 'MMM':
+#             model = mmm_model
+#         elif selected_model == 'Healthcare':
+#             model = healthcare_model
+#         else:
+#             model = finance_model
+
+#         # Run MCMC
+#         samples = run_mcmc(model, X, y)
+
+#         # Create and return the posterior plot
+#         return create_posterior_plot(samples)
+#     else:
+#         # Return the dummy plot for other tabs
+#         return create_dummy_plot()
+
+# # Run the app
+# if __name__ == '__main__':
+#     app.run_server(debug=True)
